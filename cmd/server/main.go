@@ -35,6 +35,16 @@ func main() {
     if err := database.SeedAccounts(db); err != nil {
         log.Fatalf("Failed to seed accounts: %v", err)
     }
+
+    // Seed default admin (username: admin, password: admin123)
+    if err := database.SeedDefaultAdmin(db); err != nil {
+        log.Printf("Warning: failed to seed default admin: %v", err)
+    }
+
+    // Seed sample products for testing
+    if err := database.SeedDefaultProducts(db); err != nil {
+        log.Printf("Warning: failed to seed default products: %v", err)
+    }
     
     // Create Fiber app
     app := fiber.New(fiber.Config{
