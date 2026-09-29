@@ -18,11 +18,30 @@ export const getSettings = async (db: any, outletId: string) => {
   return result[0] || null;
 };
 
-export const updateSettings = async (db: any, outletId: string, data: any) => {
-  const result = await db
-    .update(outlets)
-    .set(data)
-    .where(eq(outlets.id, outletId))
-    .returning();
-  return result[0] || null;
+import { logAudit } from "../../lib/audit";
+
+export const updateSettings = async (db: any, outletId: string, data: any, userId: string) => {
+  return await db.transaction(async (tx: any) => {
+    const oldSettings = await getSettings(tx, outletId);
+    
+    const result = await tx
+      .update(outlets)
+      .set(data)
+      .where(eq(outlets.id, outletId))
+      .returning();
+      
+    const newSettings = result[0] || null;
+    
+    await logAudit(tx, {
+      outlet_id: outletId,
+      user_id: userId,
+      action: "UPDATE_SETTINGS",
+      entity_type: "outlet",
+      entity_id: outletId,
+      before_data: oldSettings,
+      after_data: newSettings
+    });
+    
+    return newSettings;
+  });
 };

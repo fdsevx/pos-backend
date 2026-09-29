@@ -200,3 +200,65 @@ export async function createHppJournal(
     ],
   });
 }
+
+/**
+ * Reverses existing journal entries by reference ID.
+ * Swaps debit and credit for each line.
+ */
+export async function reverseJournals(
+  tx: any,
+  referenceType: string,
+  referenceId: string,
+  createdBy: string,
+  reason: string
+) {
+  const { eq, and } = await import("drizzle-orm");
+  
+  // Find original entries
+  const entries = await tx
+    .select()
+    .from(journal_entries)
+    .where(
+      and(
+        eq(journal_entries.reference_type, referenceType),
+        eq(journal_entries.reference_id, referenceId)
+      )
+    );
+
+  for (const entry of entries) {
+    // Mark original as reversed
+    await tx
+      .update(journal_entries)
+      .set({ is_reversed: true })
+      .where(eq(journal_entries.id, entry.id));
+
+    // Create reversal entry
+    const today = new Date().toISOString().slice(0, 10);
+    const [reversal] = await tx
+      .insert(journal_entries)
+      .values({
+        outlet_id: entry.outlet_id,
+        entry_date: today,
+        description: `REVERSAL: ${entry.description} - ${reason}`,
+        reference_type: "void",
+        reference_id: referenceId,
+        created_by: createdBy,
+      })
+      .returning();
+
+    // Copy and swap lines
+    const lines = await tx
+      .select()
+      .from(journal_lines)
+      .where(eq(journal_lines.journal_entry_id, entry.id));
+
+    const newLines = lines.map((line: any) => ({
+      journal_entry_id: reversal.id,
+      account_id: line.account_id,
+      debit: line.credit, // SWAP
+      credit: line.debit, // SWAP
+    }));
+
+    await tx.insert(journal_lines).values(newLines);
+  }
+}

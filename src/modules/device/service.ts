@@ -29,32 +29,37 @@ export async function registerDevice(db: any, data: RegisterInput, userId: strin
   return inserted;
 }
 
+import { logAudit } from '../../lib/audit';
+
 export async function switchOutlet(db: any, deviceId: string, newOutletId: string, userId: string) {
-  const existingDevice = await db.query.devices.findFirst({
-    where: eq(devices.id, deviceId),
+  return await db.transaction(async (tx: any) => {
+    const existingDevice = await tx.query.devices.findFirst({
+      where: eq(devices.id, deviceId),
+    });
+
+    if (!existingDevice) {
+      throw new Error('Device not found');
+    }
+
+    const oldOutletId = existingDevice.outlet_id;
+
+    const [updated] = await tx.update(devices)
+      .set({ outlet_id: newOutletId })
+      .where(eq(devices.id, deviceId))
+      .returning();
+
+    await logAudit(tx, {
+      action: 'SWITCH_OUTLET',
+      entity_type: 'device',
+      entity_id: deviceId,
+      before_data: { old_outlet: oldOutletId },
+      after_data: { new_outlet: newOutletId },
+      user_id: userId,
+      outlet_id: newOutletId
+    });
+
+    return updated;
   });
-
-  if (!existingDevice) {
-    throw new Error('Device not found');
-  }
-
-  const oldOutletId = existingDevice.outlet_id;
-
-  const [updated] = await db.update(devices)
-    .set({ outlet_id: newOutletId })
-    .where(eq(devices.id, deviceId))
-    .returning();
-
-  await db.insert(audit_logs).values({
-    action: 'SWITCH_OUTLET',
-    entity_type: 'device',
-    entity_id: null,
-    before_data: { old_outlet: oldOutletId },
-    after_data: { new_outlet: newOutletId },
-    user_id: userId,
-  });
-
-  return updated;
 }
 
 export async function getDeviceMe(db: any, deviceId: string) {

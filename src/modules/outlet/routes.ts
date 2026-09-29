@@ -48,8 +48,9 @@ outlet.put(
   async (c) => {
     const db = c.get("db") as any;
     const outletId = c.get("outletId") as string;
+    const user = c.get("user") as any;
     const data = c.req.valid("json");
-    const updated = await updateSettings(db, outletId, data);
+    const updated = await updateSettings(db, outletId, data, user.sub);
     return c.json(updated);
   }
 );

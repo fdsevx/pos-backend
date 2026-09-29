@@ -8,7 +8,7 @@ import {
   stock_movements,
   outlets,
 } from "../../db/schema";
-import { createSaleJournal, createHppJournal } from "../../lib/journal";
+import { createSaleJournal, createHppJournal, reverseJournals } from "../../lib/journal";
 import { generateReceiptNumber } from "../../lib/receipt-number";
 import type { TransactionInput } from "./schema";
 
@@ -148,5 +148,70 @@ export async function createTransaction(
     });
 
     return { id: inserted.id, status: "accepted" as const };
+  });
+}
+
+export async function voidTransaction(
+  db: any,
+  outletId: string,
+  transactionId: string,
+  userId: string,
+  reason: string
+) {
+  return await db.transaction(async (tx: any) => {
+    const [transaction] = await tx
+      .select()
+      .from(transactions)
+      .where(
+        and(eq(transactions.id, transactionId), eq(transactions.outlet_id, outletId))
+      )
+      .limit(1);
+
+    if (!transaction) {
+      throw new Error("Transaction not found");
+    }
+
+    if (transaction.status === "VOID" || transaction.status === "REFUNDED") {
+      throw new Error(`Transaction is already ${transaction.status}`);
+    }
+
+    await tx
+      .update(transactions)
+      .set({
+        status: "VOID",
+        voided_at: new Date(),
+        voided_by: userId,
+        void_reason: reason,
+      })
+      .where(eq(transactions.id, transactionId));
+
+    const items = await tx
+      .select()
+      .from(transaction_items)
+      .where(eq(transaction_items.transaction_id, transactionId));
+
+    for (const item of items) {
+      await tx
+        .update(products)
+        .set({
+          stock: sql`${products.stock} + ${item.quantity}`,
+          updated_at: new Date(),
+        })
+        .where(eq(products.id, item.product_id));
+
+      await tx.insert(stock_movements).values({
+        product_id: item.product_id,
+        outlet_id: outletId,
+        type: "void",
+        quantity: item.quantity,
+        reference_id: transactionId,
+        notes: `Void: ${item.product_name} x${item.quantity} - ${reason}`,
+        created_by: userId,
+      });
+    }
+
+    await reverseJournals(tx, "transaction", transactionId, userId, reason);
+
+    return { id: transactionId, status: "VOID" };
   });
 }
