@@ -8,6 +8,9 @@ import deviceRouter from "./modules/device/routes";
 import categoryRouter from "./modules/category/routes";
 import { productRouter, opnameRouter } from "./modules/product/routes";
 import discountRouter from "./modules/discount/routes";
+import shiftRouter from "./modules/shift/routes";
+import transactionRouter from "./modules/transaction/routes";
+import syncRouter from "./modules/sync/routes";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -39,5 +42,8 @@ app.route("/api/v1/:outlet/categories", categoryRouter);
 app.route("/api/v1/:outlet/products", productRouter);
 app.route("/api/v1/:outlet/opname", opnameRouter);
 app.route("/api/v1/:outlet/discounts", discountRouter);
+app.route("/api/v1/:outlet/shifts", shiftRouter);
+app.route("/api/v1/:outlet/transactions", transactionRouter);
+app.route("/api/v1/:outlet/sync", syncRouter);
 
 export default app;
