@@ -1,0 +1,59 @@
+# =============================================================================
+# .dockerignore — Exclude unnecessary files from Docker build context
+# Reduces build context size → faster builds → smaller layers
+# =============================================================================
+
+# Version control
+.git
+.gitignore
+
+# IDE & editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Go build artifacts (we build inside Docker)
+/server
+*.exe
+*.test
+*.out
+*.prof
+
+# Documentation & config not needed in image
+README.md
+CHANGELOG.md
+LICENSE
+docs/
+*.md
+
+# Environment (secrets should NOT be baked into image)
+.env
+.env.local
+.env.*.local
+
+# Docker files (prevent recursive build context)
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+.dockerignore
+
+# Render config
+render.yaml
+
+# Test files
+*_test.go
+/test/
+/tests/
+/testdata/
+
+# Temporary
+/tmp/
+/temp/
+*.log
+*.tmp

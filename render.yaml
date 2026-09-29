@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: pos-backend-api
+    env: docker
+    plan: free # Menggunakan tier gratis Render
+    region: ohio # Region gratis terdekat untuk Render (atau singapore jika tersedia untuk pro)
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000 # Render biasanya menggunakan port 10000 by default
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: JWT_SECRET
+        generateValue: true # Render otomatis membuatkan secret string acak 256-bit
+      - key: APP_ENV
+        value: production
+      - key: TZ
+        value: Asia/Jakarta
