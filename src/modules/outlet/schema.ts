@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const updateSettingsSchema = z.object({
-  tax_percent: z.string().optional(),
-  service_percent: z.string().optional(),
+  tax_percent: z.string().or(z.number()).transform(v => String(v)).optional(),
+  service_percent: z.string().or(z.number()).transform(v => String(v)).optional(),
   receipt_header: z.string().nullable().optional(),
   receipt_footer: z.string().nullable().optional(),
   payment_methods_enabled: z.array(z.string()).optional(),

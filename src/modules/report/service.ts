@@ -1,4 +1,4 @@
-import { eq, and, inArray, gte, lt, isNull, sql } from 'drizzle-orm';
+import { eq, and, inArray, gte, lt, lte, isNull, sql } from 'drizzle-orm';
 import { transactions, transaction_items, expenses, products, outlets, payments } from '../../db/schema';
 import Decimal from 'decimal.js-light';
 
@@ -184,6 +184,99 @@ export async function getAllOutletsMonthlySummary(db: any, userOutletIds: string
       )
     )
     .groupBy(transactions.outlet_id, outlets.name);
+
+  return rows;
+}
+
+export async function getSummaryByDates(db: any, outletId: string, startDate?: string, endDate?: string) {
+  const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const end = endDate ? new Date(`${endDate.split('T')[0]}T23:59:59.999Z`) : new Date();
+
+  const startStr = start.toISOString().split('T')[0];
+  const endStr = end.toISOString().split('T')[0];
+
+  const [txStats] = await db
+    .select({
+      jumlah_transaksi: sql<number>`count(*)::int`,
+      pendapatan_bersih: sql<string>`coalesce(sum(grand_total - tax_amount), 0)::text`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.outlet_id, outletId),
+        eq(transactions.status, 'PAID'),
+        gte(transactions.created_at, start),
+        lte(transactions.created_at, end)
+      )
+    );
+
+  const [itemStats] = await db
+    .select({
+      produk_terjual: sql<number>`coalesce(sum(${transaction_items.quantity}), 0)::int`,
+      total_hpp: sql<string>`coalesce(sum(${transaction_items.cost_price_snapshot} * ${transaction_items.quantity}), 0)::text`,
+    })
+    .from(transaction_items)
+    .innerJoin(transactions, eq(transaction_items.transaction_id, transactions.id))
+    .where(
+      and(
+        eq(transactions.outlet_id, outletId),
+        eq(transactions.status, 'PAID'),
+        gte(transactions.created_at, start),
+        lte(transactions.created_at, end)
+      )
+    );
+
+  const [expStats] = await db
+    .select({
+      total_pengeluaran: sql<string>`coalesce(sum(amount), 0)::text`,
+    })
+    .from(expenses)
+    .where(
+      and(
+        eq(expenses.outlet_id, outletId),
+        gte(expenses.expense_date, startStr),
+        lte(expenses.expense_date, endStr)
+      )
+    );
+
+  const pendapatan = new Decimal(txStats?.pendapatan_bersih || '0');
+  const hpp = new Decimal(itemStats?.total_hpp || '0');
+  const pengeluaran = new Decimal(expStats?.total_pengeluaran || '0');
+  const grossProfit = pendapatan.minus(hpp);
+  const labaBersih = grossProfit.minus(pengeluaran);
+
+  return {
+    total_omzet: pendapatan.toFixed(2),
+    total_transaksi: txStats?.jumlah_transaksi || 0,
+    total_hpp: hpp.toFixed(2),
+    gross_profit: grossProfit.toFixed(2),
+    pendapatan_bersih: pendapatan.toFixed(2),
+    jumlah_transaksi: txStats?.jumlah_transaksi || 0,
+    total_pengeluaran: pengeluaran.toFixed(2),
+    laba_bersih: labaBersih.toFixed(2),
+  };
+}
+
+export async function getChartByDates(db: any, outletId: string, startDate?: string, endDate?: string) {
+  const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const end = endDate ? new Date(`${endDate.split('T')[0]}T23:59:59.999Z`) : new Date();
+
+  const rows = await db
+    .select({
+      date: sql<string>`date(${transactions.created_at})::text`,
+      revenue: sql<string>`coalesce(sum(grand_total - tax_amount), 0)::text`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.outlet_id, outletId),
+        eq(transactions.status, 'PAID'),
+        gte(transactions.created_at, start),
+        lte(transactions.created_at, end)
+      )
+    )
+    .groupBy(sql`date(${transactions.created_at})`)
+    .orderBy(sql`date(${transactions.created_at})`);
 
   return rows;
 }

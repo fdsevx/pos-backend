@@ -13,19 +13,43 @@ const allReportRouter = new Hono<{ Bindings: Env; Variables: Variables }>();
 // Single outlet reports
 reportRouter.use('*', authMiddleware, outletMiddleware);
 
-reportRouter.get('/monthly', requirePermission('report:read'), zValidator('query', monthlyQuerySchema), async (c) => {
+// GET /:outlet/reports/summary?start_date=2026-09-01&end_date=2026-09-30
+reportRouter.get('/summary', requirePermission('report:read'), async (c) => {
   const outletId = c.get('outletId');
-  const month = c.req.valid('query').month;
-  
+  const startDate = c.req.query('start_date');
+  const endDate = c.req.query('end_date');
+  const month = c.req.query('month');
+
+  if (month && !startDate) {
+    const summary = await reportService.getMonthlySummary(c.get('db'), outletId, month);
+    return c.json({ data: summary });
+  }
+
+  const summary = await reportService.getSummaryByDates(c.get('db'), outletId, startDate, endDate);
+  return c.json({ data: summary });
+});
+
+// GET /:outlet/reports/monthly - Alias for summary
+reportRouter.get('/monthly', requirePermission('report:read'), async (c) => {
+  const outletId = c.get('outletId');
+  const month = c.req.query('month') || new Date().toISOString().slice(0, 7);
   const summary = await reportService.getMonthlySummary(c.get('db'), outletId, month);
   return c.json({ data: summary });
 });
 
-reportRouter.get('/chart', requirePermission('report:read'), zValidator('query', monthlyQuerySchema), async (c) => {
+// GET /:outlet/reports/chart?start_date=2026-09-01&end_date=2026-09-30
+reportRouter.get('/chart', requirePermission('report:read'), async (c) => {
   const outletId = c.get('outletId');
-  const month = c.req.valid('query').month;
-  
-  const chartData = await reportService.getChartData(c.get('db'), outletId, month);
+  const startDate = c.req.query('start_date');
+  const endDate = c.req.query('end_date');
+  const month = c.req.query('month');
+
+  if (month && !startDate) {
+    const chartData = await reportService.getChartData(c.get('db'), outletId, month);
+    return c.json({ data: chartData });
+  }
+
+  const chartData = await reportService.getChartByDates(c.get('db'), outletId, startDate, endDate);
   return c.json({ data: chartData });
 });
 
@@ -44,6 +68,13 @@ allReportRouter.get('/monthly', requirePermission('report:read'), zValidator('qu
   const user = c.get('user');
   const month = c.req.valid('query').month;
   
+  const summary = await reportService.getAllOutletsMonthlySummary(c.get('db'), user.outlet_ids, month);
+  return c.json({ data: summary });
+});
+
+allReportRouter.get('/summary', requirePermission('report:read'), async (c) => {
+  const user = c.get('user');
+  const month = c.req.query('month') || new Date().toISOString().slice(0, 7);
   const summary = await reportService.getAllOutletsMonthlySummary(c.get('db'), user.outlet_ids, month);
   return c.json({ data: summary });
 });

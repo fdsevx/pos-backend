@@ -8,12 +8,13 @@ export const requirePermission = (...permissions: string[]) => {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } }, 401);
     }
 
-    if (user.role === 'super_admin') {
+    if (user.role === 'super_admin' || user.role === 'admin') {
       await next();
       return;
     }
 
-    const hasAllPermissions = permissions.every(p => user.permissions.includes(p));
+    const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
+    const hasAllPermissions = permissions.every(p => userPerms.includes(p));
     if (!hasAllPermissions) {
       return c.json({ error: { code: 'FORBIDDEN', message: 'Insufficient permissions' } }, 403);
     }

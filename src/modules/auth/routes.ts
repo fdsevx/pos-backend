@@ -27,9 +27,10 @@ auth.post(
   "/login",
   zValidator("json", loginSchema, validatorHook),
   async (c) => {
-    const { username, password } = c.req.valid("json");
+    const { username, email, password } = c.req.valid("json");
+    const loginIdentifier = username || email;
     const db = createDb(c.env.HYPERDRIVE.connectionString);
-    const result = await authService.login(db, username, password, c.env.JWT_SECRET, c.env.JWT_REFRESH_SECRET);
+    const result = await authService.login(db, loginIdentifier!, password, c.env.JWT_SECRET, c.env.JWT_REFRESH_SECRET);
     return c.json(result);
   }
 );

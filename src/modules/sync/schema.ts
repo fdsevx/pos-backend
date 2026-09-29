@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { transactionSchema } from "../transaction/schema";
+import { transactionBaseSchema } from "../transaction/schema";
 
 const syncExpenseSchema = z.object({
   type: z.literal("expense"),
@@ -12,7 +12,7 @@ const syncExpenseSchema = z.object({
 
 const syncTransactionSchema = z.object({
   type: z.literal("transaction"),
-}).merge(transactionSchema);
+}).merge(transactionBaseSchema);
 
 const syncShiftOpenSchema = z.object({
   type: z.literal("shift_open"),

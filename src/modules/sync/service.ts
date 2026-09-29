@@ -35,7 +35,7 @@ export async function processSyncItem(
           outletId,
           outletSlug,
           cashierId,
-          item
+          item as any
         );
         return { id: result.id, status: result.status };
       }

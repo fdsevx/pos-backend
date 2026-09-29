@@ -9,6 +9,7 @@ import { updateSettingsSchema } from "./schema";
 import { getOutlets, getSettings, updateSettings } from "./service";
 
 const outlet = new Hono<{ Bindings: Env; Variables: Variables }>();
+const outletSettingsRouter = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 const validatorHook = (result: any, c: any) => {
   if (!result.success) {
@@ -55,4 +56,29 @@ outlet.put(
   }
 );
 
+// Router mounted directly at /api/v1/:outlet/settings
+outletSettingsRouter.use("*", authMiddleware, outletMiddleware);
+
+outletSettingsRouter.get("/", async (c) => {
+  const db = c.get("db") as any;
+  const outletId = c.get("outletId") as string;
+  const settings = await getSettings(db, outletId);
+  return c.json(settings);
+});
+
+outletSettingsRouter.put(
+  "/",
+  requirePermission("outlet:write"),
+  zValidator("json", updateSettingsSchema, validatorHook),
+  async (c) => {
+    const db = c.get("db") as any;
+    const outletId = c.get("outletId") as string;
+    const user = c.get("user") as any;
+    const data = c.req.valid("json");
+    const updated = await updateSettings(db, outletId, data, user.sub);
+    return c.json(updated);
+  }
+);
+
+export { outletSettingsRouter };
 export default outlet;

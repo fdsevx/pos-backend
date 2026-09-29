@@ -49,6 +49,7 @@ export async function login(db: any, username: string, passwordText: string, jwt
     user: {
       id: user.id,
       username: user.username,
+      email: user.username, // Alias for frontend compatibility
       display_name: user.display_name,
       role: user.role,
     },
@@ -109,6 +110,7 @@ export async function getMe(db: any, userId: string) {
   return {
     id: user.id,
     username: user.username,
+    email: user.username, // Alias for frontend compatibility
     display_name: user.display_name,
     role: user.role,
     is_active: user.is_active,

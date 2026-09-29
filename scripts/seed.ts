@@ -1,4 +1,8 @@
 import "dotenv/config";
+// @ts-ignore
+import crypto from "crypto";
+// @ts-ignore
+global.crypto = crypto;
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { hashPassword } from "../src/lib/crypto";

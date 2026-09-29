@@ -30,6 +30,12 @@ export async function createTransaction(
   data: TransactionInput
 ): Promise<{ id: string; status: "accepted" | "duplicate" }> {
   return await db.transaction(async (tx: any) => {
+    const txId = data.id || crypto.randomUUID();
+    const isUuid = (id?: string | null) =>
+      typeof id === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const validCustomerId = isUuid(data.customer_id) ? data.customer_id : null;
+
     // Generate receipt number
     const receiptNumber = await generateReceiptNumber(
       tx,
@@ -42,11 +48,11 @@ export async function createTransaction(
     const [inserted] = await tx
       .insert(transactions)
       .values({
-        id: data.id,
+        id: txId,
         outlet_id: outletId,
         device_id: data.device_id,
         receipt_number: receiptNumber,
-        customer_id: data.customer_id ?? null,
+        customer_id: validCustomerId,
         cashier_id: cashierId,
         shift_id: data.shift_id ?? null,
         table_number: data.table_number ?? null,
@@ -64,14 +70,26 @@ export async function createTransaction(
 
     // If no row returned, it's a duplicate
     if (!inserted) {
-      return { id: data.id, status: "duplicate" as const };
+      return { id: txId, status: "duplicate" as const };
+    }
+
+    // Resolve product names if missing
+    for (const item of data.items) {
+      if (!item.product_name) {
+        const [prod] = await tx
+          .select({ name: products.name })
+          .from(products)
+          .where(eq(products.id, item.product_id))
+          .limit(1);
+        item.product_name = prod?.name || `Produk ${item.product_id.slice(0, 8)}`;
+      }
     }
 
     // Insert items
     const itemValues = data.items.map((item) => ({
       transaction_id: inserted.id,
       product_id: item.product_id,
-      product_name: item.product_name,
+      product_name: item.product_name!,
       quantity: item.quantity,
       unit_price: item.unit_price,
       cost_price_snapshot: item.cost_price_snapshot,
@@ -80,20 +98,37 @@ export async function createTransaction(
     }));
     await tx.insert(transaction_items).values(itemValues);
 
-    // Insert payments
-    const paymentValues = data.payments.map((p) => ({
-      transaction_id: inserted.id,
-      method: p.method,
-      amount: p.amount,
-      amount_received: p.amount_received ?? null,
-      change_amount: p.change_amount ?? "0",
-      qris_reference: p.qris_reference ?? null,
-    }));
+    // Prepare & insert payments
+    let paymentValues: any[] = [];
+    if (data.payments && data.payments.length > 0) {
+      paymentValues = data.payments.map((p) => ({
+        transaction_id: inserted.id,
+        method: p.method,
+        amount: p.amount,
+        amount_received: p.amount_received ?? null,
+        change_amount: p.change_amount ?? "0",
+        qris_reference: p.qris_reference ?? null,
+      }));
+    } else {
+      const isQris =
+        data.payment_method?.toUpperCase() === "QRIS" ||
+        data.payment_method?.toLowerCase().includes("qris");
+      paymentValues = [
+        {
+          transaction_id: inserted.id,
+          method: isQris ? ("QRIS" as const) : ("TUNAI" as const),
+          amount: data.grand_total,
+          amount_received: data.amount_paid ?? data.grand_total,
+          change_amount: data.change_amount ?? "0",
+          qris_reference: null,
+        },
+      ];
+    }
     await tx.insert(payments).values(paymentValues);
 
     // Deduct stock atomically and create stock_movements
     for (const item of data.items) {
-      // Atomic stock deduction: stok = stok - qty (negative allowed but flagged)
+      // Atomic stock deduction: stok = stok - qty
       await tx
         .update(products)
         .set({
@@ -123,7 +158,7 @@ export async function createTransaction(
       outletSlug,
       transactionId: inserted.id,
       cashierId,
-      payments: data.payments.map((p) => ({
+      payments: paymentValues.map((p) => ({
         method: p.method,
         amount: p.amount,
       })),
