@@ -14,7 +14,7 @@ CORS_ORIGIN = "http://localhost:3000"
 # Koneksi lokal (wrangler dev) diambil dari variabel di file .env, BUKAN ditulis di sini.
 [[hyperdrive]]
 binding = "HYPERDRIVE"
-id = "ISI_ID_HYPERDRIVE_DI_SINI"
+id = "06476cecd4ca4f9e9819354a6f97aff4"
 
 # Secret (JWT_SECRET, JWT_REFRESH_SECRET):
 # lokal  -> file .dev.vars
