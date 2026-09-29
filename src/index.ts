@@ -14,6 +14,7 @@ import syncRouter from "./modules/sync/routes";
 import supplierRouter from "./modules/supplier/routes";
 import expenseRouter from "./modules/expense/routes";
 import purchaseRouter from "./modules/purchase/routes";
+import { reportRouter, allReportRouter } from "./modules/report/routes";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -51,5 +52,7 @@ app.route("/api/v1/:outlet/sync", syncRouter);
 app.route("/api/v1/:outlet/suppliers", supplierRouter);
 app.route("/api/v1/:outlet/expenses", expenseRouter);
 app.route("/api/v1/:outlet/purchases", purchaseRouter);
+app.route("/api/v1/:outlet/reports", reportRouter);
+app.route("/api/v1/all/reports", allReportRouter);
 
 export default app;
