@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.wrangler/
+package-lock.json
+drizzle/meta/
+*.pem
+.env
+.dev.vars
