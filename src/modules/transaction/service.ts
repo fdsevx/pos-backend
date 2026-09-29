@@ -147,6 +147,20 @@ export async function createTransaction(
       totalHpp: totalHpp.toFixed(2),
     });
 
+    // CRM: Update Customer spending and points
+    if (data.customer_id) {
+      const { customers } = await import('../../db/schema');
+      const earnedPoints = Math.floor(parseFloat(data.grand_total) / 10000); // 1 point per 10.000
+      await tx
+        .update(customers)
+        .set({
+          total_spending: sql`${customers.total_spending} + ${data.grand_total}`,
+          points: sql`${customers.points} + ${earnedPoints}`,
+          updated_at: new Date()
+        })
+        .where(eq(customers.id, data.customer_id));
+    }
+
     return { id: inserted.id, status: "accepted" as const };
   });
 }

@@ -16,6 +16,8 @@ import expenseRouter from "./modules/expense/routes";
 import purchaseRouter from "./modules/purchase/routes";
 import { reportRouter, allReportRouter } from "./modules/report/routes";
 import accountingRouter from "./modules/accounting/routes";
+import customerRouter from "./modules/customer/routes";
+import userRouter from "./modules/user/routes";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -40,6 +42,7 @@ app.get("/health", (c) => {
 
 // Routes
 app.route("/api/v1/auth", auth);
+app.route("/api/v1/users", userRouter);
 app.route("/api/v1/outlets", outletRouter);
 app.route("/api/v1/devices", deviceRouter);
 
@@ -56,5 +59,6 @@ app.route("/api/v1/:outlet/purchases", purchaseRouter);
 app.route("/api/v1/:outlet/reports", reportRouter);
 app.route("/api/v1/all/reports", allReportRouter);
 app.route("/api/v1/:outlet/accounting", accountingRouter);
+app.route("/api/v1/:outlet/customers", customerRouter);
 
 export default app;
