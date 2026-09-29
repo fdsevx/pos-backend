@@ -87,6 +87,25 @@ export async function createJournalEntry(
   }
 
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const currentMonth = today.substring(0, 7); // YYYY-MM
+
+  // Check if period is locked
+  const { eq, and, like, sql } = await import("drizzle-orm");
+  const [lockedCheck] = await tx
+    .select({ is_locked: journal_entries.period_locked })
+    .from(journal_entries)
+    .where(
+      and(
+        eq(journal_entries.outlet_id, data.outletId),
+        like(sql`text(${journal_entries.entry_date})`, `${currentMonth}%`),
+        eq(journal_entries.period_locked, true)
+      )
+    )
+    .limit(1);
+
+  if (lockedCheck) {
+    throw new Error(`Period ${currentMonth} is locked. Cannot create new journal entry.`);
+  }
 
   const [entry] = await tx
     .insert(journal_entries)
