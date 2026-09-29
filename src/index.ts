@@ -45,6 +45,16 @@ app.get("/", (c) => {
   });
 });
 
+// Debug Env (Sementara)
+app.get("/debug-env", (c) => {
+  return c.json({
+    hasJwtSecret: !!c.env.JWT_SECRET,
+    hasRefreshSecret: !!c.env.JWT_REFRESH_SECRET,
+    envKeys: Object.keys(c.env),
+    message: !!c.env.JWT_SECRET ? "Secret terbaca!" : "Secret MASIH KOSONG!"
+  });
+});
+
 // Health check
 app.get("/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
