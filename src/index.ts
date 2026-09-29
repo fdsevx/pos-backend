@@ -28,7 +28,7 @@ app.onError(errorHandler);
 app.use(
   "/api/*",
   cors({
-    origin: (origin, c) => c.env.CORS_ORIGIN,
+    origin: "*", // Mengizinkan semua domain frontend (localhost:3000, 5173, dll)
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "Content-Encoding", "x-device-id"],
     maxAge: 86400,
