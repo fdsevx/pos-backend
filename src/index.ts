@@ -35,6 +35,16 @@ app.use(
   })
 );
 
+// Root Welcome Route
+app.get("/", (c) => {
+  return c.json({
+    app: "POS Backend API",
+    version: "1.0.0",
+    status: "running",
+    message: "Welcome to POS Backend API. Please use /api/v1/* endpoints."
+  });
+});
+
 // Health check
 app.get("/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
