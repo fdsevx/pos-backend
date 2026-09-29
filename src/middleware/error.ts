@@ -13,7 +13,13 @@ export const errorHandler: ErrorHandler<{ Bindings: Env; Variables: Variables }>
   }
 
   return c.json(
-    { error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } },
+    { 
+      error: { 
+        code: 'INTERNAL_ERROR', 
+        message: err.message || 'Something went wrong',
+        stack: err.stack 
+      } 
+    },
     500
   );
 };
