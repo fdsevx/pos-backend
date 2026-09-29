@@ -24,7 +24,7 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run Typecheck
         run: npm run typecheck
@@ -44,7 +44,7 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
