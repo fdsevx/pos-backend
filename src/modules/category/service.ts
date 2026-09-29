@@ -1,0 +1,45 @@
+import { eq, and, isNull } from 'drizzle-orm';
+import { categories } from '../../db/schema';
+import type { CategoryInput } from './schema';
+
+export const listCategories = async (db: any, outletId: string) => {
+  return db
+    .select()
+    .from(categories)
+    .where(and(eq(categories.outlet_id, outletId), isNull(categories.deleted_at)))
+    .orderBy(categories.sort_order);
+};
+
+export const createCategory = async (db: any, outletId: string, data: CategoryInput) => {
+  const [newCategory] = await db
+    .insert(categories)
+    .values({
+      outlet_id: outletId,
+      ...data,
+    })
+    .returning();
+  return newCategory;
+};
+
+export const updateCategory = async (db: any, outletId: string, id: string, data: Partial<CategoryInput>) => {
+  const [updatedCategory] = await db
+    .update(categories)
+    .set({
+      ...data,
+      updated_at: new Date(),
+    })
+    .where(and(eq(categories.id, id), eq(categories.outlet_id, outletId), isNull(categories.deleted_at)))
+    .returning();
+  return updatedCategory;
+};
+
+export const deleteCategory = async (db: any, outletId: string, id: string) => {
+  const [deletedCategory] = await db
+    .update(categories)
+    .set({
+      deleted_at: new Date(),
+    })
+    .where(and(eq(categories.id, id), eq(categories.outlet_id, outletId), isNull(categories.deleted_at)))
+    .returning();
+  return deletedCategory;
+};
