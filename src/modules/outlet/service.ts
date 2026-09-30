@@ -1,6 +1,16 @@
 import { inArray, eq } from "drizzle-orm";
 import { outlets } from "../../db/schema";
-export const getOutlets = async (db: any, userOutletIds: string[]) => {
+export const getOutlets = async (db: any, userOutletIds: string[], isSuperAdmin?: boolean) => {
+  if (isSuperAdmin) {
+    return await db
+      .select({
+        id: outlets.id,
+        name: outlets.name,
+        slug: outlets.slug,
+        is_active: outlets.is_active,
+      })
+      .from(outlets);
+  }
   if (!userOutletIds || userOutletIds.length === 0) return [];
   return await db
     .select({

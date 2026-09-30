@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
 export const productSchema = z.object({
+  outlet_id: z.string().uuid().optional().nullable(),
   category_id: z.string().uuid().optional().nullable().or(z.literal('uuid_opsional')).or(z.literal('')).transform(v => (v === 'uuid_opsional' || v === '') ? null : v),
-  sku: z.string().min(1),
+  sku: z.string().optional().default('').transform(v => (v && v.trim() !== '' ? v : `PRD-${Date.now().toString(36).toUpperCase()}`)),
   name: z.string().min(1),
   description: z.string().optional().nullable(),
   unit: z.string().min(1).default('pcs'),

@@ -18,6 +18,12 @@ export const outletMiddleware = createMiddleware<{ Bindings: Env; Variables: Var
   const db = createDb(c.env.HYPERDRIVE.connectionString);
   c.set('db', db);
 
+  if (outletSlug.toUpperCase() === 'ALL') {
+    c.set('outletId', 'ALL');
+    await next();
+    return;
+  }
+
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(outletSlug);
   
   let outletRecord;

@@ -29,7 +29,7 @@ const validatorHook = (result: any, c: any) => {
 outlet.get("/", authMiddleware, async (c) => {
   const db = createDb(c.env.HYPERDRIVE.connectionString);
   const user = c.get("user") as any;
-  const outlets = await getOutlets(db, user.outlet_ids || []);
+  const outlets = await getOutlets(db, user.outlet_ids || [], user.role === 'super_admin');
   return c.json(outlets);
 });
 
