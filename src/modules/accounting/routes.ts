@@ -46,10 +46,34 @@ const getDefaultDates = () => {
   return { from: firstDay, to: lastDay };
 };
 
+// Helper to sanitize dates to valid calendar dates (prevents PostgreSQL "date/time out of range" like 2026-09-31)
+const sanitizeDate = (dateStr: string | undefined, defaultDate: string): string => {
+  if (!dateStr || typeof dateStr !== 'string') return defaultDate;
+  const match = dateStr.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return defaultDate;
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+  if (month < 1 || month > 12) return defaultDate;
+  const maxDays = new Date(year, month, 0).getDate();
+  const validDay = Math.min(Math.max(1, day), maxDays);
+  return `${year}-${String(month).padStart(2, '0')}-${String(validDay).padStart(2, '0')}`;
+};
+
+const getPeriodDates = (c: any) => {
+  const defaults = getDefaultDates();
+  const rawFrom = c.req.query('from');
+  const rawTo = c.req.query('to');
+  return {
+    from: sanitizeDate(rawFrom, defaults.from),
+    to: sanitizeDate(rawTo, defaults.to),
+  };
+};
+
 // GET /:outlet/accounting/ledger (Buku Besar)
 const handleLedger = async (c: any) => {
-  const { from, to } = { ...getDefaultDates(), ...c.req.query() };
-  const data = await acctService.getGeneralLedger(c.get('db'), c.get('outletId'), from!, to!);
+  const { from, to } = getPeriodDates(c);
+  const data = await acctService.getGeneralLedger(c.get('db'), c.get('outletId'), from, to);
   return c.json({ data, period: { from, to } });
 };
 accountingRouter.get('/ledger', requirePermission('accounting:read'), handleLedger);
@@ -57,8 +81,8 @@ accountingRouter.get('/reports/general-ledger', requirePermission('accounting:re
 
 // GET /:outlet/accounting/trial-balance (Neraca Saldo)
 const handleTrialBalance = async (c: any) => {
-  const { from, to } = { ...getDefaultDates(), ...c.req.query() };
-  const data = await acctService.getTrialBalance(c.get('db'), c.get('outletId'), from!, to!);
+  const { from, to } = getPeriodDates(c);
+  const data = await acctService.getTrialBalance(c.get('db'), c.get('outletId'), from, to);
   return c.json({ data, period: { from, to } });
 };
 accountingRouter.get('/trial-balance', requirePermission('accounting:read'), handleTrialBalance);
@@ -66,8 +90,8 @@ accountingRouter.get('/reports/trial-balance', requirePermission('accounting:rea
 
 // GET /:outlet/accounting/income-statement (Laba Rugi)
 const handleIncomeStatement = async (c: any) => {
-  const { from, to } = { ...getDefaultDates(), ...c.req.query() };
-  const data = await acctService.getIncomeStatement(c.get('db'), c.get('outletId'), from!, to!);
+  const { from, to } = getPeriodDates(c);
+  const data = await acctService.getIncomeStatement(c.get('db'), c.get('outletId'), from, to);
   return c.json({ data, period: { from, to } });
 };
 accountingRouter.get('/income-statement', requirePermission('accounting:read'), handleIncomeStatement);
@@ -75,7 +99,8 @@ accountingRouter.get('/reports/income-statement', requirePermission('accounting:
 
 // GET /:outlet/accounting/balance-sheet (Neraca Keuangan)
 const handleBalanceSheet = async (c: any) => {
-  const to = c.req.query('to') || new Date().toISOString().split('T')[0];
+  const defaultTo = new Date().toISOString().split('T')[0];
+  const to = sanitizeDate(c.req.query('to'), defaultTo);
   const data = await acctService.getBalanceSheet(c.get('db'), c.get('outletId'), to);
   return c.json({ data, as_of: to });
 };
@@ -84,8 +109,8 @@ accountingRouter.get('/reports/balance-sheet', requirePermission('accounting:rea
 
 // GET /:outlet/accounting/reports/cash-flow
 accountingRouter.get('/reports/cash-flow', requirePermission('accounting:read'), async (c) => {
-  const { from, to } = { ...getDefaultDates(), ...c.req.query() };
-  const data = await acctService.getCashFlow(c.get('db'), c.get('outletId'), from!, to!);
+  const { from, to } = getPeriodDates(c);
+  const data = await acctService.getCashFlow(c.get('db'), c.get('outletId'), from, to);
   return c.json({ data, period: { from, to } });
 });
 
