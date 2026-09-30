@@ -55,3 +55,44 @@ export const updateSettings = async (db: any, outletId: string, data: any, userI
     return newSettings;
   });
 };
+
+export const createOutlet = async (db: any, data: any, userId: string) => {
+  return await db.transaction(async (tx: any) => {
+    const result = await tx.insert(outlets).values(data).returning();
+    const newOutlet = result[0];
+    
+    await logAudit(tx, {
+      outlet_id: newOutlet.id,
+      user_id: userId,
+      action: "CREATE_OUTLET",
+      entity_type: "outlet",
+      entity_id: newOutlet.id,
+      before_data: null,
+      after_data: newOutlet
+    });
+    
+    return newOutlet;
+  });
+};
+
+export const deleteOutlet = async (db: any, outletId: string, userId: string) => {
+  return await db.transaction(async (tx: any) => {
+    const oldSettings = await getSettings(tx, outletId);
+    
+    // Soft delete or hard delete? Since no deleted_at on outlets, we could just hard delete, 
+    // or just set is_active to false. Let's do hard delete for now.
+    await tx.delete(outlets).where(eq(outlets.id, outletId));
+    
+    await logAudit(tx, {
+      outlet_id: outletId,
+      user_id: userId,
+      action: "DELETE_OUTLET",
+      entity_type: "outlet",
+      entity_id: outletId,
+      before_data: oldSettings,
+      after_data: null
+    });
+    
+    return { success: true };
+  });
+};

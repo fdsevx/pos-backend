@@ -9,3 +9,9 @@ export const updateSettingsSchema = z.object({
   low_stock_threshold: z.number().int().min(0).optional(),
   enable_table_number: z.boolean().optional(),
 });
+
+export const createOutletSchema = z.object({
+  name: z.string().min(2),
+  slug: z.string().min(2).regex(/^[a-z0-9-]+$/),
+  is_active: z.boolean().default(true).optional(),
+});

@@ -5,8 +5,8 @@ import { createDb } from "../../db/client";
 import { authMiddleware } from "../../middleware/auth";
 import { outletMiddleware } from "../../middleware/outlet";
 import { requirePermission } from "../../middleware/rbac";
-import { updateSettingsSchema } from "./schema";
-import { getOutlets, getSettings, updateSettings } from "./service";
+import { updateSettingsSchema, createOutletSchema } from "./schema";
+import { getOutlets, getSettings, updateSettings, createOutlet, deleteOutlet } from "./service";
 
 const outlet = new Hono<{ Bindings: Env; Variables: Variables }>();
 const outletSettingsRouter = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -82,3 +82,25 @@ outletSettingsRouter.put(
 
 export { outletSettingsRouter };
 export default outlet;
+
+outlet.post("/", authMiddleware, zValidator("json", createOutletSchema, validatorHook), async (c) => {
+  const db = createDb(c.env.HYPERDRIVE.connectionString);
+  const user = c.get("user") as any;
+  if (user.role !== 'super_admin') {
+    return c.json({ error: { code: 'FORBIDDEN', message: 'Only super_admin can create outlets' } }, 403);
+  }
+  const data = c.req.valid("json");
+  const newOutlet = await createOutlet(db, data, user.sub);
+  return c.json(newOutlet, 201);
+});
+
+outlet.delete("/:outletId", authMiddleware, async (c) => {
+  const db = createDb(c.env.HYPERDRIVE.connectionString);
+  const user = c.get("user") as any;
+  if (user.role !== 'super_admin') {
+    return c.json({ error: { code: 'FORBIDDEN', message: 'Only super_admin can delete outlets' } }, 403);
+  }
+  const outletId = c.req.param("outletId");
+  await deleteOutlet(db, outletId, user.sub);
+  return c.json({ success: true });
+});
