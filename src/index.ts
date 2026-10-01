@@ -78,8 +78,8 @@ app.route("/api/v1/:outlet/sync", syncRouter);
 app.route("/api/v1/:outlet/suppliers", supplierRouter);
 app.route("/api/v1/:outlet/expenses", expenseRouter);
 app.route("/api/v1/:outlet/purchases", purchaseRouter);
-app.route("/api/v1/:outlet/reports", reportRouter);
 app.route("/api/v1/all/reports", allReportRouter);
+app.route("/api/v1/:outlet/reports", reportRouter);
 app.route("/api/v1/:outlet/accounting", accountingRouter);
 app.route("/api/v1/:outlet/customers", customerRouter);
 
