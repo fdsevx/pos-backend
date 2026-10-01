@@ -130,7 +130,7 @@ export async function getExportData(db: any, outletId: string, from?: string, to
     .select()
     .from(transactions)
     .where(and(...filters))
-    .orderBy((t: any) => t.created_at, 'desc') // Quick fallback for sort
+    .orderBy(sql`${transactions.created_at} desc`)
     .limit(limit)
     .offset(offset);
 
@@ -181,7 +181,6 @@ export async function getAllOutletsExportData(db: any, userOutletIds: string[] |
       grand_total: transactions.grand_total,
       tax_amount: transactions.tax_amount,
       status: transactions.status,
-      payment_method: transactions.payment_method,
       created_at: transactions.created_at,
       outlet_id: transactions.outlet_id,
       outlet_name: outlets.name
