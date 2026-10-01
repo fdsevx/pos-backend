@@ -296,7 +296,6 @@ export const coa_accounts = pgTable('coa_accounts', {
   name: varchar('name', { length: 100 }).notNull(),
   type: varchar('type', { length: 20 }).notNull(), // 'asset'|'liability'|'equity'|'revenue'|'expense'
   outlet_id: uuid('outlet_id').references(() => outlets.id),
-  initial_balance: numeric('initial_balance', { precision: 15, scale: 2 }).default('0').notNull(),
   is_locked: boolean('is_locked').default(false).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

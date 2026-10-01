@@ -18,7 +18,6 @@ export async function createCOA(db: any, outletId: string, data: any) {
     .values({
       outlet_id: outletId,
       ...data,
-      initial_balance: data.initial_balance ? data.initial_balance.toString() : '0',
     })
     .returning();
   return inserted;
@@ -29,7 +28,6 @@ export async function updateCOA(db: any, outletId: string, id: string, data: any
     .update(coa_accounts)
     .set({
       ...data,
-      ...(data.initial_balance !== undefined ? { initial_balance: data.initial_balance.toString() } : {}),
       updated_at: new Date()
     })
     .where(and(eq(coa_accounts.id, id), eq(coa_accounts.outlet_id, outletId)))
