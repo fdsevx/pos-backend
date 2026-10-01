@@ -13,7 +13,7 @@ import {
  * Shared:   2100 Utang Pajak
  */
 export function getCoaCodes(outletSlug: string) {
-  if (outletSlug === "restoran") {
+  if (outletSlug.includes("restoran")) {
     return {
       cash: "1111",
       qris: "1112",

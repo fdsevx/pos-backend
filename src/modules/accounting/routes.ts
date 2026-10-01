@@ -12,22 +12,22 @@ const accountingRouter = new Hono<{ Bindings: Env; Variables: Variables }>();
 accountingRouter.use('*', authMiddleware, outletMiddleware);
 
 // --- COA ---
-accountingRouter.get('/coa', requirePermission('accounting:read'), async (c) => {
+accountingRouter.get('/coa', requirePermission('journal:read'), async (c) => {
   const data = await acctService.getCOA(c.get('db'), c.get('outletId'));
   return c.json({ data });
 });
 
-accountingRouter.post('/coa', requirePermission('accounting:write'), zValidator('json', coaSchema), async (c) => {
+accountingRouter.post('/coa', requirePermission('journal:write'), zValidator('json', coaSchema), async (c) => {
   const data = await acctService.createCOA(c.get('db'), c.get('outletId'), c.req.valid('json'));
   return c.json({ data }, 201);
 });
 
-accountingRouter.put('/coa/:id', requirePermission('accounting:write'), zValidator('json', coaSchema), async (c) => {
+accountingRouter.put('/coa/:id', requirePermission('journal:write'), zValidator('json', coaSchema), async (c) => {
   const data = await acctService.updateCOA(c.get('db'), c.get('outletId'), c.req.param('id'), c.req.valid('json'));
   return c.json({ data });
 });
 
-accountingRouter.delete('/coa/:id', requirePermission('accounting:write'), async (c) => {
+accountingRouter.delete('/coa/:id', requirePermission('journal:write'), async (c) => {
   try {
     await acctService.deleteCOA(c.get('db'), c.get('outletId'), c.req.param('id'));
     return c.json({ success: true });
@@ -37,7 +37,7 @@ accountingRouter.delete('/coa/:id', requirePermission('accounting:write'), async
 });
 
 // --- Manual Journal ---
-accountingRouter.post('/journals/manual', requirePermission('accounting:write'), zValidator('json', manualJournalSchema), async (c) => {
+accountingRouter.post('/journals/manual', requirePermission('journal:write'), zValidator('json', manualJournalSchema), async (c) => {
   try {
     const data = await acctService.createManualJournal(c.get('db'), c.get('outletId'), c.get('user').sub, c.req.valid('json'));
     return c.json({ data }, 201);
@@ -47,7 +47,7 @@ accountingRouter.post('/journals/manual', requirePermission('accounting:write'),
 });
 
 // --- Lock Period ---
-accountingRouter.post('/periods/lock', requirePermission('accounting:write'), zValidator('json', lockPeriodSchema), async (c) => {
+accountingRouter.post('/periods/lock', requirePermission('journal:write'), zValidator('json', lockPeriodSchema), async (c) => {
   await acctService.lockPeriod(c.get('db'), c.get('outletId'), c.req.valid('json').month);
   return c.json({ success: true, message: `Period ${c.req.valid('json').month} locked` });
 });
@@ -90,8 +90,8 @@ const handleLedger = async (c: any) => {
   const data = await acctService.getGeneralLedger(c.get('db'), c.get('outletId'), from, to);
   return c.json({ data, period: { from, to } });
 };
-accountingRouter.get('/ledger', requirePermission('accounting:read'), handleLedger);
-accountingRouter.get('/reports/general-ledger', requirePermission('accounting:read'), handleLedger);
+accountingRouter.get('/ledger', requirePermission('journal:read'), handleLedger);
+accountingRouter.get('/reports/general-ledger', requirePermission('journal:read'), handleLedger);
 
 // GET /:outlet/accounting/trial-balance (Neraca Saldo)
 const handleTrialBalance = async (c: any) => {
@@ -99,8 +99,8 @@ const handleTrialBalance = async (c: any) => {
   const data = await acctService.getTrialBalance(c.get('db'), c.get('outletId'), from, to);
   return c.json({ data, period: { from, to } });
 };
-accountingRouter.get('/trial-balance', requirePermission('accounting:read'), handleTrialBalance);
-accountingRouter.get('/reports/trial-balance', requirePermission('accounting:read'), handleTrialBalance);
+accountingRouter.get('/trial-balance', requirePermission('journal:read'), handleTrialBalance);
+accountingRouter.get('/reports/trial-balance', requirePermission('journal:read'), handleTrialBalance);
 
 // GET /:outlet/accounting/income-statement (Laba Rugi)
 const handleIncomeStatement = async (c: any) => {
@@ -108,8 +108,8 @@ const handleIncomeStatement = async (c: any) => {
   const data = await acctService.getIncomeStatement(c.get('db'), c.get('outletId'), from, to);
   return c.json({ data, period: { from, to } });
 };
-accountingRouter.get('/income-statement', requirePermission('accounting:read'), handleIncomeStatement);
-accountingRouter.get('/reports/income-statement', requirePermission('accounting:read'), handleIncomeStatement);
+accountingRouter.get('/income-statement', requirePermission('journal:read'), handleIncomeStatement);
+accountingRouter.get('/reports/income-statement', requirePermission('journal:read'), handleIncomeStatement);
 
 // GET /:outlet/accounting/balance-sheet (Neraca Keuangan)
 const handleBalanceSheet = async (c: any) => {
@@ -118,11 +118,11 @@ const handleBalanceSheet = async (c: any) => {
   const data = await acctService.getBalanceSheet(c.get('db'), c.get('outletId'), to);
   return c.json({ data, as_of: to });
 };
-accountingRouter.get('/balance-sheet', requirePermission('accounting:read'), handleBalanceSheet);
-accountingRouter.get('/reports/balance-sheet', requirePermission('accounting:read'), handleBalanceSheet);
+accountingRouter.get('/balance-sheet', requirePermission('journal:read'), handleBalanceSheet);
+accountingRouter.get('/reports/balance-sheet', requirePermission('journal:read'), handleBalanceSheet);
 
 // GET /:outlet/accounting/reports/cash-flow
-accountingRouter.get('/reports/cash-flow', requirePermission('accounting:read'), async (c) => {
+accountingRouter.get('/reports/cash-flow', requirePermission('journal:read'), async (c) => {
   const { from, to } = getPeriodDates(c);
   const data = await acctService.getCashFlow(c.get('db'), c.get('outletId'), from, to);
   return c.json({ data, period: { from, to } });

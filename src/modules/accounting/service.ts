@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, sql, like, inArray, lt } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, like, inArray, lt, or, isNull } from 'drizzle-orm';
 import { coa_accounts, journal_entries, journal_lines } from '../../db/schema';
 import { createJournalEntry } from '../../lib/journal';
 import Decimal from 'decimal.js-light';
@@ -8,7 +8,7 @@ export async function getCOA(db: any, outletId: string) {
   return await db
     .select()
     .from(coa_accounts)
-    .where(eq(coa_accounts.outlet_id, outletId))
+    .where(or(eq(coa_accounts.outlet_id, outletId), isNull(coa_accounts.outlet_id)))
     .orderBy(coa_accounts.code);
 }
 
@@ -54,7 +54,7 @@ export async function createManualJournal(db: any, outletId: string, userId: str
       outletId,
       description: data.description,
       referenceType: 'manual',
-      referenceId: 'MANUAL-' + Date.now(),
+      referenceId: crypto.randomUUID(),
       createdBy: userId,
       lines: data.lines,
     });
