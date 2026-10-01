@@ -63,6 +63,13 @@ reportRouter.get('/export', requirePermission('report:read'), zValidator('query'
 
 // All outlets reports (Cross-outlet for super_admin / owner)
 allReportRouter.use('*', authMiddleware);
+allReportRouter.use('*', async (c, next) => {
+  if (!c.get('db')) {
+    const { createDb } = await import('../../db/client');
+    c.set('db', createDb(c.env.HYPERDRIVE.connectionString));
+  }
+  await next();
+});
 
 allReportRouter.get('/monthly', requirePermission('report:read'), zValidator('query', monthlyQuerySchema), async (c) => {
   const user = c.get('user');
