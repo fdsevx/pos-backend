@@ -222,40 +222,88 @@ export async function getAllOutletsExportData(db: any, userOutletIds: string[] |
 }
 
 export async function getAllOutletsMonthlySummary(db: any, userOutletIds: string[] | null, month: string, locationId?: string) {
-  if (userOutletIds && userOutletIds.length === 0) return [];
+  if (userOutletIds && userOutletIds.length === 0) return null;
   
   const start = new Date(`${month}-01T00:00:00Z`);
   const end = new Date(start);
   end.setMonth(end.getMonth() + 1);
 
-  // Aggregated data grouped by outlet
-  const query = db
-    .select({
-      outlet_id: transactions.outlet_id,
-      outlet_name: outlets.name,
-      jumlah_transaksi: sql<number>`count(*)::int`,
-      pendapatan_bersih: sql<string>`coalesce(sum(${transactions.grand_total} - ${transactions.tax_amount}), 0)::text`,
-    })
-    .from(transactions)
-    .innerJoin(outlets, eq(transactions.outlet_id, outlets.id));
+  const startStr = start.toISOString().split('T')[0];
+  const endStr = end.toISOString().split('T')[0];
 
-  const filters = [
+  let outletIdsFilter: any[] = [];
+  if (userOutletIds && userOutletIds.length > 0) {
+    outletIdsFilter.push(inArray(outlets.id, userOutletIds));
+  }
+  if (locationId && locationId !== 'ALL') {
+    outletIdsFilter.push(eq(outlets.location_id, locationId));
+  }
+
+  // Get matching outlet IDs
+  let matchingOutletIds: string[] = [];
+  if (outletIdsFilter.length > 0) {
+    const matched = await db.select({ id: outlets.id }).from(outlets).where(and(...outletIdsFilter));
+    matchingOutletIds = matched.map((o: any) => o.id);
+    if (matchingOutletIds.length === 0) return null;
+  }
+
+  const txFilters = [
     eq(transactions.status, 'PAID'),
     gte(transactions.created_at, start),
     lt(transactions.created_at, end)
   ];
-
-  if (userOutletIds && userOutletIds.length > 0) {
-    filters.push(inArray(transactions.outlet_id, userOutletIds));
-  }
-  
-  if (locationId && locationId !== 'ALL') {
-    filters.push(eq(outlets.location_id, locationId));
+  if (matchingOutletIds.length > 0) {
+    txFilters.push(inArray(transactions.outlet_id, matchingOutletIds));
   }
 
-  const rows = await query.where(and(...filters)).groupBy(transactions.outlet_id, outlets.name);
+  const [txStats] = await db
+    .select({
+      jumlah_transaksi: sql<number>`count(*)::int`,
+      pendapatan_bersih: sql<string>`coalesce(sum(grand_total - tax_amount), 0)::text`,
+    })
+    .from(transactions)
+    .where(and(...txFilters));
 
-  return rows;
+  const [itemStats] = await db
+    .select({
+      produk_terjual: sql<number>`coalesce(sum(${transaction_items.quantity}), 0)::int`,
+      total_hpp: sql<string>`coalesce(sum(${transaction_items.cost_price_snapshot} * ${transaction_items.quantity}), 0)::text`,
+    })
+    .from(transaction_items)
+    .innerJoin(transactions, eq(transaction_items.transaction_id, transactions.id))
+    .where(and(...txFilters));
+
+  const expFilters = [
+    gte(expenses.expense_date, startStr),
+    lt(expenses.expense_date, endStr)
+  ];
+  if (matchingOutletIds.length > 0) {
+    expFilters.push(inArray(expenses.outlet_id, matchingOutletIds));
+  }
+
+  const [expStats] = await db
+    .select({
+      total_pengeluaran: sql<string>`coalesce(sum(amount), 0)::text`,
+    })
+    .from(expenses)
+    .where(and(...expFilters));
+
+  const pendapatan = new Decimal(txStats?.pendapatan_bersih || '0');
+  const hpp = new Decimal(itemStats?.total_hpp || '0');
+  const pengeluaran = new Decimal(expStats?.total_pengeluaran || '0');
+  const grossProfit = pendapatan.minus(hpp);
+  const labaBersih = grossProfit.minus(pengeluaran);
+
+  return {
+    total_omzet: pendapatan.toFixed(2),
+    total_transaksi: txStats?.jumlah_transaksi || 0,
+    total_hpp: hpp.toFixed(2),
+    gross_profit: grossProfit.toFixed(2),
+    pendapatan_bersih: pendapatan.toFixed(2),
+    produk_terjual: itemStats?.produk_terjual || 0,
+    total_pengeluaran: pengeluaran.toFixed(2),
+    laba_bersih: labaBersih.toFixed(2),
+  };
 }
 
 export async function getAllOutletsChartData(db: any, userOutletIds: string[] | null, month: string, locationId?: string) {
@@ -265,30 +313,37 @@ export async function getAllOutletsChartData(db: any, userOutletIds: string[] | 
   const end = new Date(start);
   end.setMonth(end.getMonth() + 1);
 
-  const query = db
-    .select({
-      date: sql<string>`date(${transactions.created_at})::text`,
-      revenue: sql<string>`sum(grand_total - tax_amount)::text`,
-    })
-    .from(transactions)
-    .innerJoin(outlets, eq(transactions.outlet_id, outlets.id));
+  let outletIdsFilter: any[] = [];
+  if (userOutletIds && userOutletIds.length > 0) {
+    outletIdsFilter.push(inArray(outlets.id, userOutletIds));
+  }
+  if (locationId && locationId !== 'ALL') {
+    outletIdsFilter.push(eq(outlets.location_id, locationId));
+  }
 
-  const filters = [
+  let matchingOutletIds: string[] = [];
+  if (outletIdsFilter.length > 0) {
+    const matched = await db.select({ id: outlets.id }).from(outlets).where(and(...outletIdsFilter));
+    matchingOutletIds = matched.map((o: any) => o.id);
+    if (matchingOutletIds.length === 0) return [];
+  }
+
+  const txFilters = [
     eq(transactions.status, 'PAID'),
     gte(transactions.created_at, start),
     lt(transactions.created_at, end)
   ];
-
-  if (userOutletIds && userOutletIds.length > 0) {
-    filters.push(inArray(transactions.outlet_id, userOutletIds));
-  }
-  
-  if (locationId && locationId !== 'ALL') {
-    filters.push(eq(outlets.location_id, locationId));
+  if (matchingOutletIds.length > 0) {
+    txFilters.push(inArray(transactions.outlet_id, matchingOutletIds));
   }
 
-  const rows = await query
-    .where(and(...filters))
+  const rows = await db
+    .select({
+      date: sql<string>`date(${transactions.created_at})::text`,
+      revenue: sql<string>`coalesce(sum(${transactions.grand_total} - ${transactions.tax_amount}), 0)::text`,
+    })
+    .from(transactions)
+    .where(and(...txFilters))
     .groupBy(sql`date(${transactions.created_at})`)
     .orderBy(sql`date(${transactions.created_at})`);
 
