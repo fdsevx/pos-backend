@@ -3,7 +3,7 @@ import { cors } from "hono/cors";
 import type { Env, Variables } from "./lib/types";
 import { errorHandler } from "./middleware/error";
 import auth from "./modules/auth/routes";
-import outletRouter, { outletSettingsRouter } from "./modules/outlet/routes";
+import outletRouter, { outletSettingsRouter, locationRouter } from "./modules/outlet/routes";
 import deviceRouter from "./modules/device/routes";
 import categoryRouter from "./modules/category/routes";
 import { productRouter, opnameRouter } from "./modules/product/routes";
@@ -63,6 +63,7 @@ app.get("/health", (c) => {
 // Routes
 app.route("/api/v1/auth", auth);
 app.route("/api/v1/users", userRouter);
+app.route("/api/v1/locations", locationRouter);
 app.route("/api/v1/outlets", outletRouter);
 app.route("/api/v1/:outlet/settings", outletSettingsRouter);
 app.route("/api/v1/devices", deviceRouter);

@@ -80,7 +80,28 @@ outletSettingsRouter.put(
   }
 );
 
-export { outletSettingsRouter };
+import { locations } from "../../db/schema";
+
+const locationRouter = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+locationRouter.get("/", authMiddleware, async (c) => {
+  const db = createDb(c.env.HYPERDRIVE.connectionString);
+  const locs = await db.select().from(locations);
+  return c.json(locs);
+});
+
+locationRouter.post("/", authMiddleware, async (c) => {
+  const db = createDb(c.env.HYPERDRIVE.connectionString);
+  const user = c.get("user") as any;
+  if (user.role !== 'super_admin') {
+    return c.json({ error: { code: 'FORBIDDEN', message: 'Only super_admin can create locations' } }, 403);
+  }
+  const body = await c.req.json();
+  const result = await db.insert(locations).values(body).returning();
+  return c.json(result[0], 201);
+});
+
+export { outletSettingsRouter, locationRouter };
 export default outlet;
 
 outlet.post("/", authMiddleware, zValidator("json", createOutletSchema, validatorHook), async (c) => {

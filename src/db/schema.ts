@@ -1,8 +1,22 @@
 import { pgTable, varchar, uuid, text, boolean, integer, numeric, date, timestamp, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
+export const locations = pgTable('locations', {
+  id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: varchar('name', { length: 100 }).notNull(),
+  code: varchar('code', { length: 20 }).notNull().unique(),
+  address: text('address'),
+  phone: varchar('phone', { length: 20 }),
+  timezone: varchar('timezone', { length: 50 }).default('Asia/Jakarta').notNull(),
+  is_active: boolean('is_active').default(true).notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  deleted_at: timestamp('deleted_at', { withTimezone: true }),
+});
+
 export const outlets = pgTable('outlets', {
   id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  location_id: uuid('location_id').references(() => locations.id),
   name: varchar('name', { length: 100 }).notNull(),
   slug: varchar('slug', { length: 20 }).notNull().unique(), // 'restoran'|'cafe'
   is_active: boolean('is_active').default(true).notNull(),

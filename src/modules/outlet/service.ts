@@ -5,6 +5,7 @@ export const getOutlets = async (db: any, userOutletIds: string[], isSuperAdmin?
     return await db
       .select({
         id: outlets.id,
+        location_id: outlets.location_id,
         name: outlets.name,
         slug: outlets.slug,
         is_active: outlets.is_active,
@@ -15,6 +16,7 @@ export const getOutlets = async (db: any, userOutletIds: string[], isSuperAdmin?
   return await db
     .select({
       id: outlets.id,
+      location_id: outlets.location_id,
       name: outlets.name,
       slug: outlets.slug,
       is_active: outlets.is_active,

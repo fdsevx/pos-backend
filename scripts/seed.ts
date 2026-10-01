@@ -1,8 +1,4 @@
 import "dotenv/config";
-// @ts-ignore
-import crypto from "crypto";
-// @ts-ignore
-global.crypto = crypto;
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { hashPassword } from "../src/lib/crypto";
@@ -12,6 +8,7 @@ import {
   user_outlets,
   user_permissions,
   coa_accounts,
+  locations,
 } from "../src/db/schema";
 
 async function seed() {
@@ -26,25 +23,46 @@ async function seed() {
 
   console.log("🌱 Seeding database...\n");
 
-  // --- 1. Outlets ---
+  // --- 0. Truncate existing data (CAREFUL in prod) ---
+  console.log("🧹 Clearing old data...");
+  await client`TRUNCATE TABLE audit_logs, journal_lines, journal_entries, coa_accounts, transaction_items, payments, transactions, shifts, stock_movements, discounts, pricing_history, products, categories, devices, user_permissions, user_outlets, users, outlets, locations, suppliers, purchases, purchase_items, expenses, customers RESTART IDENTITY CASCADE;`;
+
+  // --- 1. Locations ---
+  const [wkb] = await db
+    .insert(locations)
+    .values([
+      {
+        name: "WKB",
+        code: "WKB-01",
+        address: "Jl. Sudirman No. 1",
+        phone: "08123456789",
+      }
+    ])
+    .returning();
+    
+  console.log("✅ Locations created:", wkb.name);
+
+  // --- 2. Outlets (Business Units) ---
   const [restoran, cafe] = await db
     .insert(outlets)
     .values([
       {
-        name: "Restoran Utama",
-        slug: "restoran",
+        name: "WKB Restoran",
+        slug: "wkb-restoran",
+        location_id: wkb.id,
         tax_percent: "10.00",
         service_percent: "5.00",
-        receipt_header: "RESTORAN UTAMA\nJl. Contoh No. 1",
+        receipt_header: "WKB RESTORAN\nJl. Sudirman No. 1",
         receipt_footer: "Terima kasih telah berkunjung!",
         enable_table_number: true,
       },
       {
-        name: "Cafe Santai",
-        slug: "cafe",
+        name: "WKB Cafe",
+        slug: "wkb-cafe",
+        location_id: wkb.id,
         tax_percent: "10.00",
         service_percent: "0.00",
-        receipt_header: "CAFE SANTAI\nJl. Contoh No. 2",
+        receipt_header: "WKB CAFE\nJl. Sudirman No. 1",
         receipt_footer: "Terima kasih!",
         enable_table_number: false,
       },
