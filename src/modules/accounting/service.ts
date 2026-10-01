@@ -17,10 +17,36 @@ export async function createCOA(db: any, outletId: string, data: any) {
     .insert(coa_accounts)
     .values({
       outlet_id: outletId,
-      ...data
+      ...data,
+      initial_balance: data.initial_balance ? data.initial_balance.toString() : '0',
     })
     .returning();
   return inserted;
+}
+
+export async function updateCOA(db: any, outletId: string, id: string, data: any) {
+  const [updated] = await db
+    .update(coa_accounts)
+    .set({
+      ...data,
+      ...(data.initial_balance !== undefined ? { initial_balance: data.initial_balance.toString() } : {}),
+      updated_at: new Date()
+    })
+    .where(and(eq(coa_accounts.id, id), eq(coa_accounts.outlet_id, outletId)))
+    .returning();
+  return updated;
+}
+
+export async function deleteCOA(db: any, outletId: string, id: string) {
+  // Wait! Ensure no journal lines use this COA.
+  const lines = await db.select({ id: journal_lines.id }).from(journal_lines).where(eq(journal_lines.account_id, id)).limit(1);
+  if (lines.length > 0) throw new Error('Cannot delete COA used in journal entries');
+
+  const [deleted] = await db
+    .delete(coa_accounts)
+    .where(and(eq(coa_accounts.id, id), eq(coa_accounts.outlet_id, outletId)))
+    .returning();
+  return deleted;
 }
 
 // 2. Manual Journal

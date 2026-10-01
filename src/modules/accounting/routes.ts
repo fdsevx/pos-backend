@@ -22,6 +22,20 @@ accountingRouter.post('/coa', requirePermission('accounting:write'), zValidator(
   return c.json({ data }, 201);
 });
 
+accountingRouter.put('/coa/:id', requirePermission('accounting:write'), zValidator('json', coaSchema), async (c) => {
+  const data = await acctService.updateCOA(c.get('db'), c.get('outletId'), c.req.param('id'), c.req.valid('json'));
+  return c.json({ data });
+});
+
+accountingRouter.delete('/coa/:id', requirePermission('accounting:write'), async (c) => {
+  try {
+    await acctService.deleteCOA(c.get('db'), c.get('outletId'), c.req.param('id'));
+    return c.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: { message: err.message } }, 400);
+  }
+});
+
 // --- Manual Journal ---
 accountingRouter.post('/journals/manual', requirePermission('accounting:write'), zValidator('json', manualJournalSchema), async (c) => {
   try {

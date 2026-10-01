@@ -4,6 +4,8 @@ export const coaSchema = z.object({
   code: z.string().min(1).max(10),
   name: z.string().min(1).max(100),
   type: z.enum(["asset", "liability", "equity", "revenue", "expense"]),
+  normal_balance: z.enum(["DEBIT", "CREDIT"]).optional(),
+  initial_balance: z.number().optional(),
 });
 
 export const manualJournalSchema = z.object({

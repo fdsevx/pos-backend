@@ -13,14 +13,15 @@ export async function getMonthlySummary(db: any, outletId: string, month: string
   // 1. Transaction stats
   const [txStats] = await db
     .select({
-      jumlah_transaksi: sql<number>`count(*)::int`,
-      pendapatan_bersih: sql<string>`coalesce(sum(grand_total - tax_amount), 0)::text`,
+      jumlah_transaksi: sql<number>`sum(case when status = 'PAID' then 1 else 0 end)::int`,
+      jumlah_void: sql<number>`sum(case when status = 'VOID' then 1 else 0 end)::int`,
+      pendapatan_bersih: sql<string>`coalesce(sum(case when status = 'PAID' then grand_total - tax_amount else 0 end), 0)::text`,
     })
     .from(transactions)
     .where(
       and(
         eq(transactions.outlet_id, outletId),
-        eq(transactions.status, 'PAID'),
+        inArray(transactions.status, ['PAID', 'VOID']),
         gte(transactions.created_at, start),
         lt(transactions.created_at, end)
       )
@@ -79,6 +80,7 @@ export async function getMonthlySummary(db: any, outletId: string, month: string
   return {
     produk_terjual: itemStats?.produk_terjual || 0,
     jumlah_transaksi: txStats?.jumlah_transaksi || 0,
+    jumlah_void: txStats?.jumlah_void || 0,
     pendapatan_bersih: pendapatan.toFixed(2),
     total_hpp: hpp.toFixed(2),
     total_pengeluaran: pengeluaran.toFixed(2),
@@ -251,17 +253,25 @@ export async function getAllOutletsMonthlySummary(db: any, userOutletIds: string
     gte(transactions.created_at, start),
     lt(transactions.created_at, end)
   ];
+  const txAllStatusFilters = [
+    inArray(transactions.status, ['PAID', 'VOID']),
+    gte(transactions.created_at, start),
+    lt(transactions.created_at, end)
+  ];
+
   if (matchingOutletIds.length > 0) {
     txFilters.push(inArray(transactions.outlet_id, matchingOutletIds));
+    txAllStatusFilters.push(inArray(transactions.outlet_id, matchingOutletIds));
   }
 
   const [txStats] = await db
     .select({
-      jumlah_transaksi: sql<number>`count(*)::int`,
-      pendapatan_bersih: sql<string>`coalesce(sum(grand_total - tax_amount), 0)::text`,
+      jumlah_transaksi: sql<number>`sum(case when status = 'PAID' then 1 else 0 end)::int`,
+      jumlah_void: sql<number>`sum(case when status = 'VOID' then 1 else 0 end)::int`,
+      pendapatan_bersih: sql<string>`coalesce(sum(case when status = 'PAID' then grand_total - tax_amount else 0 end), 0)::text`,
     })
     .from(transactions)
-    .where(and(...txFilters));
+    .where(and(...txAllStatusFilters));
 
   const [itemStats] = await db
     .select({
@@ -296,6 +306,7 @@ export async function getAllOutletsMonthlySummary(db: any, userOutletIds: string
   return {
     total_omzet: pendapatan.toFixed(2),
     total_transaksi: txStats?.jumlah_transaksi || 0,
+    jumlah_void: txStats?.jumlah_void || 0,
     total_hpp: hpp.toFixed(2),
     gross_profit: grossProfit.toFixed(2),
     pendapatan_bersih: pendapatan.toFixed(2),
