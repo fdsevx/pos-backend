@@ -158,15 +158,15 @@ export async function getExportData(db: any, outletId: string, from?: string, to
   return data;
 }
 
-export async function getAllOutletsMonthlySummary(db: any, userOutletIds: string[], month: string) {
-  if (userOutletIds.length === 0) return [];
+export async function getAllOutletsMonthlySummary(db: any, userOutletIds: string[] | null, month: string, locationId?: string) {
+  if (userOutletIds && userOutletIds.length === 0) return [];
   
   const start = new Date(`${month}-01T00:00:00Z`);
   const end = new Date(start);
   end.setMonth(end.getMonth() + 1);
 
   // Aggregated data grouped by outlet
-  const rows = await db
+  const query = db
     .select({
       outlet_id: transactions.outlet_id,
       outlet_name: outlets.name,
@@ -174,16 +174,60 @@ export async function getAllOutletsMonthlySummary(db: any, userOutletIds: string
       pendapatan_bersih: sql<string>`coalesce(sum(${transactions.grand_total} - ${transactions.tax_amount}), 0)::text`,
     })
     .from(transactions)
-    .innerJoin(outlets, eq(transactions.outlet_id, outlets.id))
-    .where(
-      and(
-        inArray(transactions.outlet_id, userOutletIds),
-        eq(transactions.status, 'PAID'),
-        gte(transactions.created_at, start),
-        lt(transactions.created_at, end)
-      )
-    )
-    .groupBy(transactions.outlet_id, outlets.name);
+    .innerJoin(outlets, eq(transactions.outlet_id, outlets.id));
+
+  const filters = [
+    eq(transactions.status, 'PAID'),
+    gte(transactions.created_at, start),
+    lt(transactions.created_at, end)
+  ];
+
+  if (userOutletIds && userOutletIds.length > 0) {
+    filters.push(inArray(transactions.outlet_id, userOutletIds));
+  }
+  
+  if (locationId && locationId !== 'ALL') {
+    filters.push(eq(outlets.location_id, locationId));
+  }
+
+  const rows = await query.where(and(...filters)).groupBy(transactions.outlet_id, outlets.name);
+
+  return rows;
+}
+
+export async function getAllOutletsChartData(db: any, userOutletIds: string[] | null, month: string, locationId?: string) {
+  if (userOutletIds && userOutletIds.length === 0) return [];
+
+  const start = new Date(`${month}-01T00:00:00Z`);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + 1);
+
+  const query = db
+    .select({
+      date: sql<string>`date(${transactions.created_at})::text`,
+      revenue: sql<string>`sum(grand_total - tax_amount)::text`,
+    })
+    .from(transactions)
+    .innerJoin(outlets, eq(transactions.outlet_id, outlets.id));
+
+  const filters = [
+    eq(transactions.status, 'PAID'),
+    gte(transactions.created_at, start),
+    lt(transactions.created_at, end)
+  ];
+
+  if (userOutletIds && userOutletIds.length > 0) {
+    filters.push(inArray(transactions.outlet_id, userOutletIds));
+  }
+  
+  if (locationId && locationId !== 'ALL') {
+    filters.push(eq(outlets.location_id, locationId));
+  }
+
+  const rows = await query
+    .where(and(...filters))
+    .groupBy(sql`date(${transactions.created_at})`)
+    .orderBy(sql`date(${transactions.created_at})`);
 
   return rows;
 }

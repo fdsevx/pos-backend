@@ -67,16 +67,28 @@ allReportRouter.use('*', authMiddleware);
 allReportRouter.get('/monthly', requirePermission('report:read'), zValidator('query', monthlyQuerySchema), async (c) => {
   const user = c.get('user');
   const month = c.req.valid('query').month;
+  const locationId = c.req.query('location_id');
   
-  const summary = await reportService.getAllOutletsMonthlySummary(c.get('db'), user.outlet_ids, month);
+  const summary = await reportService.getAllOutletsMonthlySummary(c.get('db'), user.role === 'super_admin' ? null : user.outlet_ids, month, locationId);
   return c.json({ data: summary });
 });
 
 allReportRouter.get('/summary', requirePermission('report:read'), async (c) => {
   const user = c.get('user');
   const month = c.req.query('month') || new Date().toISOString().slice(0, 7);
-  const summary = await reportService.getAllOutletsMonthlySummary(c.get('db'), user.outlet_ids, month);
+  const locationId = c.req.query('location_id');
+  
+  const summary = await reportService.getAllOutletsMonthlySummary(c.get('db'), user.role === 'super_admin' ? null : user.outlet_ids, month, locationId);
   return c.json({ data: summary });
+});
+
+allReportRouter.get('/chart', requirePermission('report:read'), async (c) => {
+  const user = c.get('user');
+  const month = c.req.query('month') || new Date().toISOString().slice(0, 7);
+  const locationId = c.req.query('location_id');
+  
+  const chartData = await reportService.getAllOutletsChartData(c.get('db'), user.role === 'super_admin' ? null : user.outlet_ids, month, locationId);
+  return c.json({ data: chartData });
 });
 
 export { reportRouter, allReportRouter };
