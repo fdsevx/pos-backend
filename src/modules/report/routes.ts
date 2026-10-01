@@ -91,4 +91,13 @@ allReportRouter.get('/chart', requirePermission('report:read'), async (c) => {
   return c.json({ data: chartData });
 });
 
+allReportRouter.get('/export', requirePermission('report:read'), zValidator('query', exportQuerySchema), async (c) => {
+  const user = c.get('user');
+  const locationId = c.req.query('location_id');
+  const { from, to, page, limit } = c.req.valid('query');
+  
+  const data = await reportService.getAllOutletsExportData(c.get('db'), user.role === 'super_admin' ? null : user.outlet_ids, locationId, from, to, page, limit);
+  return c.json({ data, page, limit });
+});
+
 export { reportRouter, allReportRouter };

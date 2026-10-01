@@ -158,6 +158,69 @@ export async function getExportData(db: any, outletId: string, from?: string, to
   return data;
 }
 
+export async function getAllOutletsExportData(db: any, userOutletIds: string[] | null, locationId?: string, from?: string, to?: string, page: number = 1, limit: number = 50) {
+  if (userOutletIds && userOutletIds.length === 0) return [];
+  const offset = (page - 1) * limit;
+
+  let filters = [];
+  if (from) filters.push(gte(transactions.created_at, new Date(from)));
+  if (to) filters.push(lt(transactions.created_at, new Date(to)));
+  
+  if (userOutletIds && userOutletIds.length > 0) {
+    filters.push(inArray(transactions.outlet_id, userOutletIds));
+  }
+  
+  if (locationId && locationId !== 'ALL') {
+    filters.push(eq(outlets.location_id, locationId));
+  }
+
+  const query = db
+    .select({
+      id: transactions.id,
+      receipt_number: transactions.receipt_number,
+      grand_total: transactions.grand_total,
+      tax_amount: transactions.tax_amount,
+      status: transactions.status,
+      payment_method: transactions.payment_method,
+      created_at: transactions.created_at,
+      outlet_id: transactions.outlet_id,
+      outlet_name: outlets.name
+    })
+    .from(transactions)
+    .innerJoin(outlets, eq(transactions.outlet_id, outlets.id));
+    
+  if (filters.length > 0) {
+    query.where(and(...filters));
+  }
+
+  const txData = await query
+    .orderBy(sql`${transactions.created_at} desc`)
+    .limit(limit)
+    .offset(offset);
+
+  if (txData.length === 0) return [];
+
+  const txIds = txData.map((t: any) => t.id);
+
+  const items = await db
+    .select()
+    .from(transaction_items)
+    .where(inArray(transaction_items.transaction_id, txIds));
+
+  const pmts = await db
+    .select()
+    .from(payments)
+    .where(inArray(payments.transaction_id, txIds));
+
+  const data = txData.map((t: any) => ({
+    ...t,
+    items: items.filter((i: any) => i.transaction_id === t.id),
+    payments: pmts.filter((p: any) => p.transaction_id === t.id),
+  }));
+
+  return data;
+}
+
 export async function getAllOutletsMonthlySummary(db: any, userOutletIds: string[] | null, month: string, locationId?: string) {
   if (userOutletIds && userOutletIds.length === 0) return [];
   
