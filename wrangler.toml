@@ -9,8 +9,6 @@ enabled = true
 # Ganti dengan domain Web Admin Next.js Anda saat produksi
 [vars]
 CORS_ORIGIN = "http://localhost:3000"
-JWT_REFRESH_SECRET = "8f2e4d1c3b5a790e2b4f6d8a0c2e4f6a8b0c2d4e6f8a0b2c4d6e8f0a2b4c6d8e"
-JWT_SECRET = "c7a8b9f2e4d163c5a7098e2b4f6d1a3c8e9f0a2b4c6d8e0f2a4b6c8d0e2f4a6c"
 
 # Isi id dengan hasil perintah: npx wrangler hyperdrive create pos-db --connection-string="<URI Aiven>"
 # Koneksi lokal (wrangler dev) diambil dari variabel di file .env, BUKAN ditulis di sini.
