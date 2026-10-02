@@ -116,12 +116,26 @@ export async function processSyncItem(
       }
 
       case "void": {
-        // Void placeholder — full implementation in Fase 4
-        return {
-          id: item.transaction_id,
-          status: "failed",
-          error: "Void via sync not yet implemented (Fase 4)",
-        };
+        try {
+          // Import it directly or via transaction service
+          const { voidTransaction } = await import("../transaction/service");
+          const result = await voidTransaction(
+            db,
+            outletId,
+            item.transaction_id!,
+            cashierId,
+            item.notes || "Voided via offline sync"
+          );
+          return {
+            id: item.transaction_id!,
+            status: "accepted",
+          };
+        } catch (err: any) {
+          if (err.message.includes("already VOID")) {
+            return { id: item.transaction_id!, status: "duplicate" };
+          }
+          throw err;
+        }
       }
 
       default:
