@@ -1,10 +1,14 @@
-import { eq, isNull } from 'drizzle-orm';
+import { eq, isNull, and } from 'drizzle-orm';
 import { users, user_outlets, user_permissions } from '../../db/schema';
 import { hashPassword } from '../../lib/crypto';
-import type { UserCreateInput, UserUpdateInput } from './schema';
+import type { UserCreateInput, UserUpdateInput, UserApproveInput } from './schema';
 
-export async function getUsers(db: any) {
-  // Return active users (not deleted)
+export async function getUsers(db: any, status?: string) {
+  let filter = isNull(users.deleted_at);
+  if (status === 'pending') {
+    filter = and(isNull(users.deleted_at), eq(users.role, 'pending'), eq(users.is_active, false)) as any;
+  }
+
   return await db
     .select({
       id: users.id,
@@ -15,7 +19,7 @@ export async function getUsers(db: any) {
       created_at: users.created_at,
     })
     .from(users)
-    .where(isNull(users.deleted_at));
+    .where(filter);
 }
 
 export async function createUser(db: any, data: UserCreateInput) {
@@ -102,4 +106,69 @@ export async function deleteUser(db: any, id: string) {
     
   if (!deleted) throw new Error("User not found");
   return { success: true };
+}
+
+export async function approveUser(db: any, id: string, data: UserApproveInput) {
+  return await db.transaction(async (tx: any) => {
+    // 1. Update user to active and set role
+    await tx.update(users).set({
+      is_active: true,
+      role: data.role,
+      updated_at: new Date()
+    }).where(eq(users.id, id));
+
+    // 2. Assign outlets
+    if (data.outlet_ids && data.outlet_ids.length > 0) {
+      await tx.delete(user_outlets).where(eq(user_outlets.user_id, id));
+      const outletValues = data.outlet_ids.map((outletId: string) => ({ user_id: id, outlet_id: outletId }));
+      await tx.insert(user_outlets).values(outletValues);
+    }
+
+    // 3. Assign permissions based on role
+    const allPermissions = [
+      "stock:read", "stock:write",
+      "menu:read", "menu:write",
+      "transaction:read", "transaction:write", "transaction:void",
+      "journal:read", "journal:write",
+      "outlet:read", "outlet:write", "outlet:switch",
+      "report:read", "report:export",
+      "user:read", "user:write",
+      "customer:read", "customer:write",
+      "supplier:read", "supplier:write",
+      "expense:read", "expense:write",
+      "purchase:read", "purchase:write",
+      "discount:read", "discount:write",
+      "shift:read", "shift:write",
+      "audit:read",
+    ];
+
+    let perms: string[] = [];
+    if (data.role === "manager") {
+      perms = allPermissions.filter((p) => !p.startsWith("user:") && p !== "outlet:write");
+    } else if (data.role === "cashier") {
+      perms = [
+        "menu:read", "stock:read", "transaction:read", "transaction:write",
+        "discount:read", "shift:read", "shift:write",
+      ];
+    } else if (data.role === "accountant") {
+      perms = [
+        "transaction:read", "journal:read", "journal:write",
+        "report:read", "report:export", "expense:read", "purchase:read",
+        "stock:read", "menu:read",
+      ];
+    } else if (data.role === "crm_staff") {
+      perms = [
+        "customer:read", "customer:write", "discount:read", "discount:write",
+        "transaction:read",
+      ];
+    }
+
+    if (perms.length > 0) {
+      await tx.delete(user_permissions).where(eq(user_permissions.user_id, id));
+      const permValues = perms.map(p => ({ user_id: id, permission: p }));
+      await tx.insert(user_permissions).values(permValues);
+    }
+
+    return { id, status: "approved", role: data.role };
+  });
 }

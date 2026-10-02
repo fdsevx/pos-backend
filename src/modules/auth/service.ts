@@ -133,7 +133,7 @@ export async function register(db: any, input: RegisterInput) {
     username: input.username,
     display_name: input.display_name,
     password_hash: hashedPassword,
-    role: "admin", // default role for self-registered
+    role: "pending", // default role for self-registered
     is_active: false // requires superadmin approval
   }).returning().then((res: any) => res[0]);
 

@@ -14,12 +14,12 @@ productRouter.use('*', authMiddleware);
 productRouter.use('*', outletMiddleware);
 
 const canWriteMenu = (user: any) => {
-  if (user.role === 'super_admin' || user.role === 'admin') return true;
+  if (user.role === 'super_admin') return true;
   return user.permissions?.includes('menu:write');
 };
 
 const canWriteStock = (user: any) => {
-  if (user.role === 'super_admin' || user.role === 'admin') return true;
+  if (user.role === 'super_admin') return true;
   return user.permissions?.includes('stock:write');
 };
 

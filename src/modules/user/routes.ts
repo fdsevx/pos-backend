@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { userCreateSchema, userUpdateSchema, resetPasswordSchema } from './schema';
+import { userCreateSchema, userUpdateSchema, resetPasswordSchema, userApproveSchema } from './schema';
 import * as userService from './service';
 import { authMiddleware } from '../../middleware/auth';
 import type { Env, Variables } from '../../lib/types';
@@ -12,8 +12,8 @@ userRouter.use('*', authMiddleware);
 
 userRouter.use('*', async (c, next) => {
   const user = c.get('user');
-  if (user.role !== 'super_admin' && user.role !== 'admin') {
-    return c.json({ error: 'Forbidden. Admin access required.' }, 403);
+  if (user.role !== 'super_admin') {
+    return c.json({ error: 'Forbidden. Super admin access required.' }, 403);
   }
   await next();
 });
@@ -29,7 +29,8 @@ userRouter.use('*', async (c, next) => {
 });
 
 userRouter.get('/', async (c) => {
-  const data = await userService.getUsers(c.get('db'));
+  const status = c.req.query('status');
+  const data = await userService.getUsers(c.get('db'), status);
   return c.json({ data });
 });
 
@@ -37,6 +38,15 @@ userRouter.post('/', zValidator('json', userCreateSchema), async (c) => {
   try {
     const data = await userService.createUser(c.get('db'), c.req.valid('json'));
     return c.json({ data }, 201);
+  } catch (err: any) {
+    return c.json({ error: err.message }, 400);
+  }
+});
+
+userRouter.post('/:id/approve', zValidator('json', userApproveSchema), async (c) => {
+  try {
+    const data = await userService.approveUser(c.get('db'), c.req.param('id'), c.req.valid('json'));
+    return c.json({ data });
   } catch (err: any) {
     return c.json({ error: err.message }, 400);
   }

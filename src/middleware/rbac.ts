@@ -8,7 +8,7 @@ export const requirePermission = (...permissions: string[]) => {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } }, 401);
     }
 
-    if (user.role === 'super_admin' || user.role === 'admin') {
+    if (user.role === 'super_admin') {
       await next();
       return;
     }

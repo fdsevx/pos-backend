@@ -38,7 +38,7 @@ export const users = pgTable('users', {
   username: varchar('username', { length: 50 }).notNull().unique(),
   password_hash: text('password_hash').notNull(),
   display_name: varchar('display_name', { length: 100 }).notNull(),
-  role: varchar('role', { length: 20 }).notNull(), // super_admin|manager|cashier|accountant|crm_staff
+  role: varchar('role', { length: 20 }).notNull(), // super_admin|manager|cashier|accountant|crm_staff|pending
   is_active: boolean('is_active').default(true).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
