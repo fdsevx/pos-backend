@@ -1,6 +1,11 @@
-# Salin file ini menjadi .dev.vars (JANGAN di-commit).
-# Buat nilai acak: node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
-JWT_SECRET=GANTI_DENGAN_STRING_ACAK_PANJANG
-JWT_REFRESH_SECRET=GANTI_DENGAN_STRING_ACAK_LAIN
+# File ini HANYA untuk lokal (wrangler dev). Salin menjadi .dev.vars (JANGAN di-commit).
+# UNTUK PRODUKSI, nilai-nilai rahasia harus diisi melalui Cloudflare dashboard atau menggunakan perintah CLI:
+# npx wrangler secret put JWT_SECRET
+# npx wrangler secret put JWT_REFRESH_SECRET
 
+# Buat nilai acak lokal: node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+JWT_SECRET="<ganti_dengan_string_acak_panjang>"
+JWT_REFRESH_SECRET="<ganti_dengan_string_acak_lain>"
+
+# Set ENVIRONMENT=development secara eksplisit HANYA di lokal
 ENVIRONMENT="development"

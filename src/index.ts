@@ -28,9 +28,10 @@ app.onError(errorHandler);
 app.use(
   "/api/*",
   (c, next) => {
-    const allowedOrigin = c.env.CORS_ORIGIN || "http://localhost:3000";
+    const originsStr = c.env.CORS_ORIGIN || "http://localhost:3000";
+    const allowedOrigins = originsStr.split(',').map(o => o.trim()).filter(Boolean);
     return cors({
-      origin: allowedOrigin, // Mengizinkan origin dari env
+      origin: (origin) => (allowedOrigins.includes(origin) ? origin : null),
       allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization", "Content-Encoding", "x-device-id"],
       maxAge: 86400,

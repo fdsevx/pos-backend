@@ -2,13 +2,14 @@ name = "pos-backend"
 main = "src/index.ts"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
+keep_vars = true
 
 [observability]
 enabled = true
 
 # Ganti dengan domain Web Admin Next.js Anda saat produksi
 [vars]
-CORS_ORIGIN = "http://localhost:3000"
+CORS_ORIGIN = "https://pos-admin.fdsevx.workers.dev,http://localhost:3000"
 
 # Isi id dengan hasil perintah: npx wrangler hyperdrive create pos-db --connection-string="<URI Aiven>"
 # Koneksi lokal (wrangler dev) diambil dari variabel di file .env, BUKAN ditulis di sini.
