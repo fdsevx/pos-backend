@@ -2,3 +2,5 @@
 # Buat nilai acak: node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 JWT_SECRET=GANTI_DENGAN_STRING_ACAK_PANJANG
 JWT_REFRESH_SECRET=GANTI_DENGAN_STRING_ACAK_LAIN
+
+ENVIRONMENT="development"

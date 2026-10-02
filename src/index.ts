@@ -48,6 +48,17 @@ app.get("/", (c) => {
   });
 });
 
+// Debug Env (development only)
+app.get("/debug-env", (c) => {
+  if (c.env.ENVIRONMENT !== "development") {
+    return c.notFound();
+  }
+  return c.json({
+    hasJwtSecret: !!c.env.JWT_SECRET,
+    hasRefreshSecret: !!c.env.JWT_REFRESH_SECRET,
+  });
+});
+
 // Health check
 app.get("/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });

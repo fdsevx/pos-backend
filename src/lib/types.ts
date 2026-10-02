@@ -1,6 +1,7 @@
 import type { createDb } from "../db/client";
 
 export type Env = {
+  ENVIRONMENT?: string;
   HYPERDRIVE: Hyperdrive;
   JWT_SECRET: string;
   JWT_REFRESH_SECRET: string;
