@@ -27,12 +27,15 @@ app.onError(errorHandler);
 // CORS
 app.use(
   "/api/*",
-  cors({
-    origin: "*", // Mengizinkan semua domain frontend (localhost:3000, 5173, dll)
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "Content-Encoding", "x-device-id"],
-    maxAge: 86400,
-  })
+  (c, next) => {
+    const allowedOrigin = c.env.CORS_ORIGIN || "http://localhost:3000";
+    return cors({
+      origin: allowedOrigin, // Mengizinkan origin dari env
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowHeaders: ["Content-Type", "Authorization", "Content-Encoding", "x-device-id"],
+      maxAge: 86400,
+    })(c, next);
+  }
 );
 
 // Root Welcome Route
@@ -42,16 +45,6 @@ app.get("/", (c) => {
     version: "1.0.0",
     status: "running",
     message: "Welcome to POS Backend API. Please use /api/v1/* endpoints."
-  });
-});
-
-// Debug Env (Sementara)
-app.get("/debug-env", (c) => {
-  return c.json({
-    hasJwtSecret: !!c.env.JWT_SECRET,
-    hasRefreshSecret: !!c.env.JWT_REFRESH_SECRET,
-    envKeys: Object.keys(c.env),
-    message: !!c.env.JWT_SECRET ? "Secret terbaca!" : "Secret MASIH KOSONG!"
   });
 });
 
