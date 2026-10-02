@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { users, user_outlets, user_permissions } from "../../db/schema";
-import { verifyPassword } from "../../lib/crypto";
+import { verifyPassword, hashPassword } from "../../lib/crypto";
 import { generateTokens, verifyRefreshToken } from "../../middleware/auth";
 import type { JwtPayload } from "../../lib/types";
+import type { RegisterInput } from "./schema";
 
 async function loadUserClaims(db: any, userId: string) {
   const [outletsRes, permissionsRes] = await Promise.all([
@@ -116,5 +117,30 @@ export async function getMe(db: any, userId: string) {
     is_active: user.is_active,
     outlet_ids: claims.outlet_ids,
     permissions: claims.permissions,
+  };
+}
+
+export async function register(db: any, input: RegisterInput) {
+  // Check if username exists
+  const existingUser = await db.select().from(users).where(eq(users.username, input.username)).limit(1).then((res: any) => res[0]);
+  if (existingUser) {
+    throw new HTTPException(400, { message: "Username already exists" });
+  }
+
+  const hashedPassword = await hashPassword(input.password);
+  
+  const newUser = await db.insert(users).values({
+    username: input.username,
+    display_name: input.display_name,
+    password_hash: hashedPassword,
+    role: "admin", // default role for self-registered
+    is_active: false // requires superadmin approval
+  }).returning().then((res: any) => res[0]);
+
+  return {
+    id: newUser.id,
+    username: newUser.username,
+    display_name: newUser.display_name,
+    is_active: newUser.is_active
   };
 }

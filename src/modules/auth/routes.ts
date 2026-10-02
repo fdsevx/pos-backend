@@ -3,7 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import type { Env, Variables } from "../../lib/types";
 import { createDb } from "../../db/client";
 import { authMiddleware } from "../../middleware/auth";
-import { loginSchema, refreshSchema } from "./schema";
+import { loginSchema, refreshSchema, registerSchema } from "./schema";
 import * as authService from "./service";
 
 const auth = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -22,6 +22,17 @@ const validatorHook = (result: any, c: any) => {
     );
   }
 };
+
+auth.post(
+  "/register",
+  zValidator("json", registerSchema, validatorHook),
+  async (c) => {
+    const input = c.req.valid("json");
+    const db = createDb(c.env.HYPERDRIVE.connectionString);
+    const result = await authService.register(db, input);
+    return c.json({ user: result, message: "Registration successful. Waiting for superadmin approval." }, 201);
+  }
+);
 
 auth.post(
   "/login",
