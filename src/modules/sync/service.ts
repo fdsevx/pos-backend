@@ -124,7 +124,7 @@ export async function processSyncItem(
             outletId,
             item.transaction_id!,
             cashierId,
-            item.notes || "Voided via offline sync"
+            item.reason || "Voided via offline sync"
           );
           return {
             id: item.transaction_id!,
